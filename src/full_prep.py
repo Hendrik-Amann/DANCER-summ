@@ -211,15 +211,21 @@ def main():
             "article_id") \
             .withColumn(
             "section_summary",
-            collect_summary_udf(F.struct(F.col("section_idx"), F.col("matched_summaries")))) \
-            .where(
-            F.size(F.col("section_summary")) > 0) \
-            .withColumn(
+            collect_summary_udf(F.struct(F.col("section_idx"), F.col("matched_summaries"))))
+
+        #HA: original dancer does the following filter on all splits, but this information would not be available on actual inference data set. The section_summary is assigned based on rogue scores between text and human summary,  which would not be available
+        if prefix not in ('test'):
+            df = df.where(F.size(F.col("section_summary")) > 0)
+            
+        df = df.withColumn(
             'section_id',
-            section_identify(b_keywords)('section_head')) \
-            .where(
-            F.col("section_id").isin(selected_section_types)) \
-            .withColumn(
+            section_identify(b_keywords)('section_head'))
+
+        #HA: test set is filtered based on section id during generation anyway. Keeping all section types for test set, since it could be intereting for later analysis
+        if prefix not in ('test'):
+            df = df.where(F.col("section_id").isin(selected_section_types))
+
+        df = df.withColumn(
             "document",
             F.concat_ws(" ", F.col("full_text_section").section_text)) \
             .withColumn(
