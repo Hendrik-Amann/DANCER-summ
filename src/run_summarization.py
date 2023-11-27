@@ -24,7 +24,8 @@ import re
 import gc
 import sys
 from dataclasses import dataclass, field
-from typing import Optional
+#HA: the Dict import was not part of the original DANCER code. It has been added for the ismpleRouge_objective function used later
+from typing import Optional, Dict
 
 import nltk  # Here to have a nice missing dependency error message early on
 import numpy as np
@@ -46,8 +47,19 @@ from transformers import (
     default_data_collator,
     set_seed,
 )
-from transformers.trainer_utils import get_last_checkpoint, is_main_process
-from transformers import EarlyStoppingCallback
+#HA: removing the import of get_last_checkpoint. It would have been used to resume training from checkpoint_dir, which will not be used by ray
+from transformers.trainer_utils import is_main_process #, get_last_checkpoint
+#HA: removing the imort of EarlyStoppingCallback, instead the training is relying on population based bandits and the time limit to stop trials
+#from transformers import EarlyStoppingCallback
+
+import ray
+from ray import tune
+#HA: the reporter reports the metrics of trials
+from ray.tune import CLIReporter
+#HA: following imports are necessary for population based bandits
+import GPy
+import sklearn
+from ray.tune.examples.pbt_function import pbt_function
 
 with FileLock(".lock") as lock:
     nltk.download("punkt", quiet=True)
@@ -260,20 +272,35 @@ def main():
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
+
+    #HA: The save and evaluation strategy should be set to steps. Using epochs should be seriously reconsidered as explained below
+    if training_args.save_strategy != "steps":
+        print("The code has been tested and executed with steps as save_strategy. Using another strategy could lead to issues with ray tune.")
+        return None
+
+    if training_args.evaluation_strategy != "steps":
+        print("The code has been tested and executed with steps as evaluation_strategy. Using another strategy could lead to issues with ray tune. When completing an epoch, ray cannot continue a trial with the next epoch. The trial will not continue to train, only the process will run until the time limit has been reached")
+        return None
+
+    #HA: I suggest highly to have save_steps and eval_steps to match due to the reasons explained below
+    if training_args.save_steps != training_args.eval_steps:
+        print("With ray the eval steps and save steps should match. It is possible to use different values for the parameters, but it can lead to unwanted behavior. The behavior is then dependent on if the number of trial matches the number of used gpus. It can result in a model not continuing from a chekcpoint, but training completely anew.")
+
+    #HA: The code would have to be rewritten to work with ray. Since resuming from a checkpoint is not a scenario used by me, it is commented out
     # Detecting last checkpoint.
-    last_checkpoint = None
-    if os.path.isdir(training_args.output_dir) and training_args.do_train and not training_args.overwrite_output_dir:
-        last_checkpoint = get_last_checkpoint(training_args.output_dir)
-        if last_checkpoint is None and len(os.listdir(training_args.output_dir)) > 0:
-            raise ValueError(
-                f"Output directory ({training_args.output_dir}) already exists and is not empty. "
-                "Use --overwrite_output_dir to overcome."
-            )
-        elif last_checkpoint is not None:
-            logger.info(
-                f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this behavior, change "
-                "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
-            )
+    #last_checkpoint = None
+    #if os.path.isdir(training_args.output_dir) and training_args.do_train and not training_args.overwrite_output_dir:
+    #    last_checkpoint = get_last_checkpoint(training_args.output_dir)
+    #    if last_checkpoint is None and len(os.listdir(training_args.output_dir)) > 0:
+    #        raise ValueError(
+    #            f"Output directory ({training_args.output_dir}) already exists and is not empty. "
+    #            "Use --overwrite_output_dir to overcome."
+    #        )
+    #    elif last_checkpoint is not None:
+    #        logger.info(
+    #            f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this behavior, change "
+    #            "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
+    #        )
 
     # Setup logging
     logging.basicConfig(
@@ -344,27 +371,33 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    model = AutoModelForSeq2SeqLM.from_pretrained(
-        model_args.model_name_or_path,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        config=config,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
+    #HA: ray does not use a model, but the model_init to initialize a model for each trial, so this can be commented out
+    #model = AutoModelForSeq2SeqLM.from_pretrained(
+    #    model_args.model_name_or_path,
+    #    from_tf=bool(".ckpt" in model_args.model_name_or_path),
+    #    config=config,
+    #    cache_dir=model_args.cache_dir,
+    #    revision=model_args.model_revision,
+    #    use_auth_token=True if model_args.use_auth_token else None,
+    #)
+    #HA: the model init function ray tune uses
+    def model_init(trial):
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_args.model_name_or_path, gradient_checkpointing=True, use_cache=False)
+        return model
 
-    # Set decoder_start_token_id
-    if model.config.decoder_start_token_id is None and isinstance(tokenizer, (MBartTokenizer, MBartTokenizerFast)):
-        assert (
-            data_args.target_lang is not None and data_args.source_lang is not None
-        ), "mBart requires --target_lang and --source_lang"
-        if isinstance(tokenizer, MBartTokenizer):
-            model.config.decoder_start_token_id = tokenizer.lang_code_to_id[data_args.target_lang]
-        else:
-            model.config.decoder_start_token_id = tokenizer.convert_tokens_to_ids(data_args.target_lang)
+    #HA: MBartTokenizer is not used by me and the model variable is not getting defined as explained above. Therefore, following section can be commented out
+    # Set decoder_start_token_id    
+    #if model.config.decoder_start_token_id is None and isinstance(tokenizer, (MBartTokenizer, MBartTokenizerFast)):
+    #    assert (
+    #        data_args.target_lang is not None and data_args.source_lang is not None
+    #    ), "mBart requires --target_lang and --source_lang"
+    #    if isinstance(tokenizer, MBartTokenizer):
+    #        model.config.decoder_start_token_id = tokenizer.lang_code_to_id[data_args.target_lang]
+    #    else:
+    #        model.config.decoder_start_token_id = tokenizer.convert_tokens_to_ids(data_args.target_lang)
 
-    if model.config.decoder_start_token_id is None:
-        raise ValueError("Make sure that `config.decoder_start_token_id` is correctly defined")
+    #if model.config.decoder_start_token_id is None:
+    #    raise ValueError("Make sure that `config.decoder_start_token_id` is correctly defined")
 
     prefix = data_args.source_prefix if data_args.source_prefix is not None else ""
 
@@ -465,9 +498,12 @@ def main():
         return model_inputs
 
     if training_args.do_train:
-        train_dataset = datasets["train"]
+        #HA: original DANCER placed the train_dataset assignment here and the check afterwards. It should match the order as for eval and test set
+        # train_dataset = datasets["train"]
         if "train" not in datasets:
             raise ValueError("--do_train requires a train dataset")
+        #HA: as explained above, the order of the assignment of train_dataset has been adjusted by me
+        train_dataset = datasets["train"]
         if data_args.max_train_samples is not None:
             train_dataset = train_dataset.select(range(data_args.max_train_samples))
         train_dataset = train_dataset.map(
@@ -528,12 +564,13 @@ def main():
         preds = [pred.strip() for pred in preds]
         labels = [label.strip() for label in labels]
 
+        #HA: rougeLSum will not be used during training, due to speed up the evaluation, so the following can be commented out
         # rougeLSum expects newline after each sentence
-        if metric_name == "rouge":
-            preds = ["\n".join(nltk.sent_tokenize(pred)) for pred in preds]
-            labels = ["\n".join(nltk.sent_tokenize(label)) for label in labels]
-        else:  # sacrebleu
-            labels = [[label] for label in labels]
+        #if metric_name == "rouge":
+        #    preds = ["\n".join(nltk.sent_tokenize(pred)) for pred in preds]
+        #    labels = ["\n".join(nltk.sent_tokenize(label)) for label in labels]
+        #else:  # sacrebleu
+        #    labels = [[label] for label in labels]
 
         return preds, labels
 
@@ -551,20 +588,64 @@ def main():
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
 
         if metric_name == "rouge":
-            result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
+            #HA: limiting the rouge_types to rouge2 to speed up the evaluation
+            result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True, rouge_types=["rouge2"])
             # Extract a few results from ROUGE
             result = {key: value.mid.fmeasure * 100 for key, value in result.items()}
         else:
             result = metric.compute(predictions=decoded_preds, references=decoded_labels)
             result = {"bleu": result["score"]}
 
-        prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
-        result["gen_len"] = np.mean(prediction_lens)
+        #Prediction lenghts are not of interest, to speed up the evaluation it is commented out
+        #prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
+        #result["gen_len"] = np.mean(prediction_lens)
         result = {k: round(v, 4) for k, v in result.items()}
         return result
 
-    es_callback = EarlyStoppingCallback(early_stopping_patience=3)
+    #HA: EarlyStoppingCallback not used by me as mentioned earlier. Instead, training is relying on population based bandits to handle bad performing trials
+    # es_callback = EarlyStoppingCallback(early_stopping_patience=3)
+
+    #HA: this is the intial set of parameters, during permutation the hyperparam_bounds in the PB2 class wil be used
+    #HA: the hp_space in the hyperparameter_search method cannot be empty, so I provide some values here
+    tune_config = {
+        "weight_decay": tune.choice([0.0, 0.01]),
+    }
+
+    #HA: the objective to be improved by population based bandits.
+    #HA: the default objective uses the sum of all metrics of the coput_metrics function. I only want the eval_rouge2 metric
+    #HA: used the default objective function of ray tune as orientation
+    def simpleRouge_objective(metrics: Dict[str, float]) -> float:
+        return metrics['eval_rouge2']
+
+    #HA: reports hyperparmameters and metrics
+    reporter = CLIReporter{
+        parameter_columns={
+            "weight_decay": "w_decay",
+            "learning_rate": "lr",
+            "num_train_epochs": "num_epochs",
+        }
+        #HA: eval_rouge2 and objective should be the same. Kind of a sanity check to report both
+        metric_columns=["eval_rouge2", "objective"],
+    }
+
+    #HA: the algorithm used to improve the objective
+    scheduler = ray.tune.schedulers.pb2.PB2(
+        #HA: this allows perturbation at every eval step
+        time_attr="training_iteration",
+        peturbation_interval=1,
+        #HA: the metric to optimize. eval_rouge2 could have been used here, but to fit the ray tune framework, I set it to objective
+        metric="objective",
+        #HA: the direction the objective should have; With max: the higher the objective, the better
+        mode="max",
+        #the lower and upper bound of the hyperparameters
+        hyperparam_bounds={
+            "learning_rate": [4e-6, 8e-5],
+            "weight_decay": [0.0, 0.01]
+        },
+    )
+    
     # Initialize our Trainer
+    
     trainer = Seq2SeqTrainer(
         model=model,
         args=training_args,
@@ -575,69 +656,76 @@ def main():
         compute_metrics=compute_metrics if training_args.predict_with_generate else None,
         callbacks=[es_callback]
     )
-    
+
+    #HA: The training function is replaced with the population based bandits training, so the original DANCER training code is commented out
     # Training
-    if training_args.do_train:
-        if last_checkpoint is not None:
-            checkpoint = last_checkpoint
-        elif os.path.isdir(model_args.model_name_or_path):
-            checkpoint = model_args.model_name_or_path
-        else:
-            checkpoint = None
-        train_result = trainer.train(resume_from_checkpoint=checkpoint)
-        trainer.save_model()  # Saves the tokenizer too for easy upload
+    #if training_args.do_train:
+    #    if last_checkpoint is not None:
+    #        checkpoint = last_checkpoint
+    #    elif os.path.isdir(model_args.model_name_or_path):
+    #        checkpoint = model_args.model_name_or_path
+    #    else:
+    #        checkpoint = None
+    #    train_result = trainer.train(resume_from_checkpoint=checkpoint)
+    #    trainer.save_model()  # Saves the tokenizer too for easy upload
 
-        metrics = train_result.metrics
-        max_train_samples = (
-            data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
-        )
-        metrics["train_samples"] = min(max_train_samples, len(train_dataset))
+    #    metrics = train_result.metrics
+    #    max_train_samples = (
+    #        data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
+    #    )
+    #    metrics["train_samples"] = min(max_train_samples, len(train_dataset))
 
-    train_metrics = metrics
+    #train_metrics = metrics
+
+    #HA: since the trainer does not get a model, but model_init function, evaluation and prediction will not work like this. Model would have to be loaded first.
+    #HA: For my case, there is no value in doing evaluation and prediction after the training anyway, so it will be commented out
     
     # Evaluation
-    if training_args.do_eval:
-        logger.info("*** Evaluate ***")
+    #if training_args.do_eval:
+    #    logger.info("*** Evaluate ***")
 
-        metrics = trainer.evaluate(
-            max_length=data_args.val_max_target_length, num_beams=data_args.num_beams, metric_key_prefix="eval"
-        )
-        max_val_samples = data_args.max_val_samples if data_args.max_val_samples is not None else len(eval_dataset)
-        metrics["eval_samples"] = min(max_val_samples, len(eval_dataset))
+    #    metrics = trainer.evaluate(
+    #        max_length=data_args.val_max_target_length, num_beams=data_args.num_beams, metric_key_prefix="eval"
+    #    )
+    #    max_val_samples = data_args.max_val_samples if data_args.max_val_samples is not None else len(eval_dataset)
+    #    metrics["eval_samples"] = min(max_val_samples, len(eval_dataset))
 
-    eval_metrics = metrics
-    print(eval_metrics)
+    #eval_metrics = metrics
+    #print(eval_metrics)
 
-    if training_args.do_predict:
-        logger.info("*** Test ***")
 
-        test_results = trainer.predict(
-            test_dataset,
-            metric_key_prefix="test",
-            max_length=data_args.val_max_target_length,
-            num_beams=data_args.num_beams,
-        )
-        metrics = test_results.metrics
-        max_test_samples = data_args.max_test_samples if data_args.max_test_samples is not None else len(test_dataset)
-        metrics["test_samples"] = min(max_test_samples, len(test_dataset))
+    #if training_args.do_predict:
+    #    logger.info("*** Test ***")
 
-        if trainer.is_world_process_zero():
-            if training_args.predict_with_generate:
-                test_preds = tokenizer.batch_decode(
-                    test_results.predictions, skip_special_tokens=True, clean_up_tokenization_spaces=True
-                )
-                test_preds = [pred.strip() for pred in test_preds]
-                output_test_preds_file = os.path.join(training_args.output_dir, "test_preds_seq2seq.txt")
-                with open(output_test_preds_file, "w") as writer:
-                    writer.write("\n".join(test_preds))
+    #    test_results = trainer.predict(
+    #        test_dataset,
+    #        metric_key_prefix="test",
+    #        max_length=data_args.val_max_target_length,
+    #        num_beams=data_args.num_beams,
+    #    )
+    #    metrics = test_results.metrics
+    #    max_test_samples = data_args.max_test_samples if data_args.max_test_samples is not None else len(test_dataset)
+    #    metrics["test_samples"] = min(max_test_samples, len(test_dataset))
+
+    #    if trainer.is_world_process_zero():
+    #        if training_args.predict_with_generate:
+    #            test_preds = tokenizer.batch_decode(
+    #                test_results.predictions, skip_special_tokens=True, clean_up_tokenization_spaces=True
+    #            )
+    #            test_preds = [pred.strip() for pred in test_preds]
+    #            output_test_preds_file = os.path.join(training_args.output_dir, "test_preds_seq2seq.txt")
+    #            with open(output_test_preds_file, "w") as writer:
+    #                writer.write("\n".join(test_preds))
                     
-    test_metrics = metrics
-    
-    del model, trainer
+    #test_metrics = metrics
+
+    #HA: there is no model defined, so the del can be removed
+    del trainer #, model
     gc.collect()
     torch.cuda.empty_cache()
 
-    return train_metrics, eval_metrics, test_metrics
+    #HA: the metrics have not been filled with values with my code and are not of interest here, so the statement should be commented out
+    #return train_metrics #, eval_metrics, test_metrics
 
 
 def _mp_fn(index):
