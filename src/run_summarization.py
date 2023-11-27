@@ -110,6 +110,15 @@ class ModelArguments:
             "with private models)."
         },
     )
+    #HA: added to push the best model to huggingface hub, after the training
+    ha_push_to_hub: bool = field(
+	default=False,
+	metadata = {"help:" "Whether or not to push best model checkpoint to huggingface hub."},
+    )
+    ha_out_name: Optional[str] = field(
+	    default = None,
+	    metadata={"help:" "Name of saved the model"}
+    )
 
 
 @dataclass
@@ -233,10 +242,10 @@ class DataTrainingArguments:
     source_prefix: Optional[str] = field(
         default=None, metadata={"help": "A prefix to add before every source text (useful for T5 models)."}
     )
-    #HA: added to push the best model to huggingface hub, after the training
-    ha_push_to_hub: bool = field(
-	default=False,
-	metadata = {"help:" "Whether or not to push best model checkpoint to huggingface hub"}
+    #HA: path to store ray objectives (trials) in
+    storage_path: str = field(
+        default="./ray_results",
+        metadata = {"help:" "Folder to store ray objectives (trials) in."},
     )
 
     def __post_init__(self):
@@ -286,11 +295,13 @@ def main():
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
 
+    if model_args.ha_push_to_hub and model_args.ha_out_name == None:
+        warnings.warn("ha_push_to_hub is set to True, but no ha_out_name is given. Cannot push the model to hf hub without a name for the model")
+        return None
     #HA: The save and evaluation strategy should be set to steps. Using epochs should be seriously reconsidered as explained below
     if training_args.save_strategy != "steps":
         warnings.warn("The code has been tested and executed with steps as save_strategy. Using another strategy could lead to issues with ray tune.")
         return None
-
     if training_args.evaluation_strategy != "steps":
         warnings.warn("The code has been tested and executed with steps as evaluation_strategy. Using another strategy could lead to issues with ray tune. When completing an epoch, ray cannot continue a trial with the next epoch. The trial will not continue to train, only the process will run until the time limit has been reached")
         return None
@@ -301,8 +312,8 @@ def main():
 
 
     #HA: pushing to hub with multiple trials probably will not work. Not tested, since not needed in my case
-    if training_args.push_to_hub = True:
-	warnings.warn("Manually deactivating push_to_hub")
+    if training_args.push_to_hub == True:
+        warnings.warn("Manually deactivating push_to_hub training argument")
     training_args.push_to_hub = False
 
     #HA: The code would have to be rewritten to work with ray. Since resuming from a checkpoint is not a scenario used by me, it is commented out
@@ -637,15 +648,15 @@ def main():
         return metrics['eval_rouge2']
 
     #HA: reports hyperparmameters and metrics
-    reporter = CLIReporter{
+    reporter = CLIReporter(
         parameter_columns={
             "weight_decay": "w_decay",
             "learning_rate": "lr",
             "num_train_epochs": "num_epochs",
-        }
+        },
         #HA: eval_rouge2 and objective should be the same. Kind of a sanity check to report both
         metric_columns=["eval_rouge2", "objective"],
-    }
+    )
 
     #HA: the algorithm used to improve the objective
     scheduler = ray.tune.schedulers.pb2.PB2(
@@ -695,11 +706,12 @@ def main():
         direction="max",
         backend="ray",
         n_trials=2,
-        hp_space=lambda_: tune_config,
+        hp_space=lambda _: tune_config,
         scheduler=scheduler,
         progress_report=reporter,
         checkpoint_score_attr="objective",
         compute_objettive=simpleRouge_objective,
+        storage_path=data_args.storage_path,
         time_budget_s=60*8,
         #HA: checkpoint config does not work reliably, but it does not hurt to have it here
         checkpoint_config=CheckpointCOnfig(
@@ -779,17 +791,15 @@ def main():
     #return train_metrics #, eval_metrics, test_metrics
 
     #HA: getting best checkpoint from the trials
-    dirpath = "./ray_results"
+    objectives = list(filter(os.path.isdir, glob.glob(data_args.storage_path+"/_objective_*")))
+    objectives.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    objective = objectives[0]
 
-	objectives = list(filter(os.path.isdir, glob.glob(dirpath+"/_objective_*")))
-	objectives.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-	objective = objectives[0]
-
-	trials = glob.glob(objective+"/_objective_*")
+    trials = glob.glob(objective+"/_objective_*")
 
     #HA: get all checkpoint scores
-	score_metric = 'eval_rouge2'
-	res = {}
+    score_metric = 'eval_rouge2'
+    res = {}
 
     for trial_dir in trials:
         chkpt0_dirs = glob.glob(trial_dir+"/checkpoint_[0-9]*")
@@ -845,6 +855,10 @@ def main():
             print("Multiple trials have the same max rouge score at the same step. Choosing checkpoint:", firstBestChkpt[0])
             print("see the other checkpoints with the same score:", chkpts)
             chkptForHfHub = firstBestChkpt[0]
+
+    if chkptForHub and model_args.ha_push_to_hub:
+        model = AutoModelForSeq2SeqLM.from_pretrained(chptForHub)
+        model.push_to_hub(model_args.ha_out_name)
             
 def _mp_fn(index):
     # For xla_spawn (TPUs)
