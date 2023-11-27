@@ -1,4 +1,4 @@
 python src/full_prep.py \
-    --data_root /path/to/your/dataroot \
-    --task pubmed \
-    --partitions 500 --driver_memory 12g
+    --data_root /home/hamann/bachelor/data \
+    --task dancer \
+    --partitions 500 --driver_memory 8g
