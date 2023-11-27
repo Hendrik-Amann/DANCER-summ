@@ -66,6 +66,7 @@ from ray.tune.schedulers.pb2_utils import (normalize, optimize_acq, select_lengt
 from customTrain import HA_Trainer
 #HA: for getting best checkpoint
 import glob
+import warnings
 
 
 with FileLock(".lock") as lock:
@@ -232,6 +233,11 @@ class DataTrainingArguments:
     source_prefix: Optional[str] = field(
         default=None, metadata={"help": "A prefix to add before every source text (useful for T5 models)."}
     )
+    #HA: added to push the best model to huggingface hub, after the training
+    ha_push_to_hub: bool = field(
+	default=False,
+	metadata = {"help:" "Whether or not to push best model checkpoint to huggingface hub"}
+    )
 
     def __post_init__(self):
         if self.dataset_name is None and self.train_file is None and self.validation_file is None:
@@ -282,16 +288,22 @@ def main():
 
     #HA: The save and evaluation strategy should be set to steps. Using epochs should be seriously reconsidered as explained below
     if training_args.save_strategy != "steps":
-        print("The code has been tested and executed with steps as save_strategy. Using another strategy could lead to issues with ray tune.")
+        warnings.warn("The code has been tested and executed with steps as save_strategy. Using another strategy could lead to issues with ray tune.")
         return None
 
     if training_args.evaluation_strategy != "steps":
-        print("The code has been tested and executed with steps as evaluation_strategy. Using another strategy could lead to issues with ray tune. When completing an epoch, ray cannot continue a trial with the next epoch. The trial will not continue to train, only the process will run until the time limit has been reached")
+        warnings.warn("The code has been tested and executed with steps as evaluation_strategy. Using another strategy could lead to issues with ray tune. When completing an epoch, ray cannot continue a trial with the next epoch. The trial will not continue to train, only the process will run until the time limit has been reached")
         return None
 
-    #HA: I suggest highly to have save_steps and eval_steps to match due to the reasons explained below
+    #HA: I highly suggest to have save_steps and eval_steps to match due to the reasons explained below
     if training_args.save_steps != training_args.eval_steps:
-        print("With ray the eval steps and save steps should match. It is possible to use different values for the parameters, but it can lead to unwanted behavior. The behavior is then dependent on if the number of trial matches the number of used gpus. It can result in a model not continuing from a chekcpoint, but training completely anew.")
+        warnings.warn("With ray the eval steps and save steps should match. It is possible to use different values for the parameters, but it can lead to unwanted behavior. The behavior is then dependent on if the number of trial matches the number of used gpus. It can result in a model not continuing from a chekcpoint, but training completely anew.")
+
+
+    #HA: pushing to hub with multiple trials probably will not work. Not tested, since not needed in my case
+    if training_args.push_to_hub = True:
+	warnings.warn("Manually deactivating push_to_hub")
+    training_args.push_to_hub = False
 
     #HA: The code would have to be rewritten to work with ray. Since resuming from a checkpoint is not a scenario used by me, it is commented out
     # Detecting last checkpoint.
