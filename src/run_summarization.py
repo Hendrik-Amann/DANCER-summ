@@ -52,14 +52,21 @@ from transformers.trainer_utils import is_main_process #, get_last_checkpoint
 #HA: removing the imort of EarlyStoppingCallback, instead the training is relying on population based bandits and the time limit to stop trials
 #from transformers import EarlyStoppingCallback
 
+#HA: following imports have been added by me
 import ray
 from ray import tune
-#HA: the reporter reports the metrics of trials
+from ray.air.config import CheckpointConfig
 from ray.tune import CLIReporter
-#HA: following imports are necessary for population based bandits
+#HA: for population based bandits
 import GPy
 import sklearn
 from ray.tune.examples.pbt_function import pbt_function
+from ray.tune.schedulers.pb2_utils import (normalize, optimize_acq, select_length, UCB, standardize, TV_SquaredExp,)
+#HA using my own Trainer
+from customTrain import HA_Trainer
+#HA: for getting best checkpoint
+import glob
+
 
 with FileLock(".lock") as lock:
     nltk.download("punkt", quiet=True)
@@ -643,9 +650,19 @@ def main():
             "weight_decay": [0.0, 0.01]
         },
     )
-    
+
+    trainer = HA_Trainer(
+        model_init = model_init,
+        args = training_args,
+        train_dataset = train_dataset if training_args.do_train else None,
+        eval_dataset=eval_dataset if training_args.do_eval else None,
+        tokenizer=tokenizer,
+        data_collator=data_collator,
+        compute_metrics=compute_metrics if training_args.predict_with_generate else None
+    )
+    #HA: calling my own trainer class instead of the transoformers trainer
     # Initialize our Trainer
-    
+    """
     trainer = Seq2SeqTrainer(
         model=model,
         args=training_args,
@@ -655,6 +672,28 @@ def main():
         data_collator=data_collator,
         compute_metrics=compute_metrics if training_args.predict_with_generate else None,
         callbacks=[es_callback]
+    )
+    """
+
+    #HA to ensure checkpointing
+    trainer.use_tune_checkpoints=True
+
+    #HA: running the hyperparameter search
+    best_trial = trainer.hyperparameter_search(
+        direction="max",
+        backend="ray",
+        n_trials=2,
+        hp_space=lambda_: tune_config,
+        scheduler=scheduler,
+        progress_report=reporter,
+        checkpoint_score_attr="objective",
+        compute_objettive=simpleRouge_objective,
+        time_budget_s=60*8,
+        #HA: checkpoint config does not work reliably, but it does not hurt to have it here
+        checkpoint_config=CheckpointCOnfig(
+            num_to_keep=3,
+            checkpoint_score_attribute="objective",
+        ),
     )
 
     #HA: The training function is replaced with the population based bandits training, so the original DANCER training code is commented out
@@ -727,7 +766,74 @@ def main():
     #HA: the metrics have not been filled with values with my code and are not of interest here, so the statement should be commented out
     #return train_metrics #, eval_metrics, test_metrics
 
+    #HA: getting best checkpoint from the trials
+    dirpath = "./ray_results"
 
+	objectives = list(filter(os.path.isdir, glob.glob(dirpath+"/_objective_*")))
+	objectives.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+	objective = objectives[0]
+
+	trials = glob.glob(objective+"/_objective_*")
+
+    #HA: get all checkpoint scores
+	score_metric = 'eval_rouge2'
+	res = {}
+
+    for trial_dir in trials:
+        chkpt0_dirs = glob.glob(trial_dir+"/checkpoint_[0-9]*")
+        if len(chkpt0_dirs) == 0:
+            continue
+        chkpt_dirs = []
+        for dir in chkpt0_dirs:
+            if len(glob.glob(dir+"/checkpoint*")) > 0:
+                chkpt_dirs.append(glob.glob(dir+"/checkpoint*")[0])
+        for dir in chkpt_dirs:
+            if len(glob.glob(dir+"/trainer_state.json")) == 0:
+                continue
+            with open(os.path.join(dir, 'trainer_state.json'), 'r') as f:
+                try:
+                    contents = json.loads(f.read())
+                    res[dir] = contents['log_history'][-1][score_metric]
+                except KeyError:
+                    print('checkpoint does not have eval_rouge2 at last log_history entry, at checkpoint:', dir)
+    r_max = max(res.values())
+
+    #HA: getting checkpoint with the highest score
+    chkpts = []
+    for key in res:
+        if res[key] == r_max:
+            chkpts.append(key)
+
+    chkptForHfHub = ''
+    #HA: if there is only 1 checkpoint with the highest score, then use it. If there are multiple checkpoints with the same score, use the checkpoint from the earliest step (across different trials).
+    #HA: if there are multiple trials with the same rouge score (the best one) at the same step in training, it uses the checkpoint that was first read (probably the one with a lower trial number).
+    #HA: it is an unlikely scenario, unless the best checkpoint has been copied to other trials. I would suggest checking the files manually then to ensure that everything worked correctly
+    if len(chkpts) < 1:
+        print("There has been an issue with getting the best checkpoint. Please check the files manually")
+    elif len(chkpts) == 1:
+        chkptForHub = chkpts[0]
+    else:
+        chkptsSplit = []
+        for chkpt in chkpts:
+            chkptsSplit.append(os.path.split(chkpt))
+        chkptsSplit = dict(chkptsSplit)
+        firstBestChkpt = min(chkptsSplit.values())
+        firstBestChkptDir = []
+
+        for key in chkptsSplit:
+            if chkptsSplit[key] == firstBestChkpt:
+                firstBestChkptDir.append(key)
+        if len(firstBestChkptDir) < 1:
+            print("There has been an issue with getting the best checkpoint. Please check the files manually")
+        elif len(firstBestChkpt) == 1:
+            print("There have been multiple checkpoints with the same rouge2 score. Choosing first checkpoint:", firstBestChkpt[0])
+            print("See other checkpoints with the same score:", chkpts)
+            chkptForHfHub = firstBestChkpt[0]
+        else:
+            print("Multiple trials have the same max rouge score at the same step. Choosing checkpoint:", firstBestChkpt[0])
+            print("see the other checkpoints with the same score:", chkpts)
+            chkptForHfHub = firstBestChkpt[0]
+            
 def _mp_fn(index):
     # For xla_spawn (TPUs)
     main()
