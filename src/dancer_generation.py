@@ -31,17 +31,20 @@ def generate_summaries(test_loader, args, device):
             input_ids,
             num_beams=args.num_beams,
             early_stopping=True,
-            return_dict_in_generate=True,
-            output_scores=True)  # only one beam should be equivalent to greedy,
+            #HA: dictionary and output_scores not used anyway, so I removed it. Should increase performance a bit, since no dict has to be returned
+            #return_dict_in_generate=True,
+            #output_scores=True
+        )  # only one beam should be equivalent to greedy,
         gen_sum = [
             tokenizer.decode(
-                g, skip_special_tokens=True, clean_up_tokenization_spaces=False) for g in sent_outputs["sequences"]]
+                g, skip_special_tokens=True,
+                #HA: originally set to False, but I set it to True. It removes redundant white spaces
+                clean_up_tokenization_spaces=True) for g in sent_outputs["sequences"]]
 
         gen_sums += gen_sum
         target_sums += batch[args.summary_column]
 
         #HA: in the original code, there was no if-else statement. Only the section commented out below. Reasoning in comment below
-        only the first part of the if-else statement was used.  The if else condition was added, to use article_id for the non-DANCER dataset, where there are not section_ids and abstracts
         if args.mode == "dancer":
             try:
                 article_ids += batch["article_id"]
