@@ -39,7 +39,8 @@ def generate_summaries(test_loader, args, device):
             tokenizer.decode(
                 g, skip_special_tokens=True,
                 #HA: originally set to False, but I set it to True. It removes redundant white spaces
-                clean_up_tokenization_spaces=True) for g in sent_outputs["sequences"]]
+                #HA: originally sent_outputs["sequences"] because it returend a dict, but I changed it to only returning the tensors, so it had to be changed to sent_outputs[0]
+                clean_up_tokenization_spaces=True) for g in sent_outputs[0]]
 
         gen_sums += gen_sum
         target_sums += batch[args.summary_column]
