@@ -39,6 +39,21 @@ def generate_summaries(test_loader, args, device):
 
         gen_sums += gen_sum
         target_sums += batch[args.summary_column]
+
+        #HA: in the original code, there was no if-else statement. Only the section commented out below. Reasoning in comment below
+        only the first part of the if-else statement was used.  The if else condition was added, to use article_id for the non-DANCER dataset, where there are not section_ids and abstracts
+        if args.mode == "dancer":
+            try:
+                article_ids += batch["article_id"]
+                section_ids += batch["section_id"]
+                abstracts += batch["abstract"]
+            except KeyError:
+                article_ids += [i]
+        else:
+            article_ids += batch["article_id"]
+
+        #HA: I want to also add the article_ids for the non-DANCER dataset, where there are no section_ids or abstracts. Section above already implements this, so the following should be commented out
+        """
         try:
             article_ids += batch["article_id"]
             section_ids += batch["section_id"]
@@ -46,7 +61,7 @@ def generate_summaries(test_loader, args, device):
         except KeyError:
             article_ids += [i]
             pass
-        
+        """
     return gen_sums, target_sums, article_ids, section_ids, abstracts
 
 
@@ -97,13 +112,30 @@ def main():
     
     print("Scoring generated summaries")
     if args.mode == "dancer":
+
+        #HA: I want to save the partial generated summaries with the partial target summaries
+        df = pd.DataFrame(
+            list(zip(article_ids, section_ids, target_sums, gen_sums)),
+            columns=["article_id", "section_id", "target_sum", "gen_sum"])
+
+        df.to_json(os.path.join(out_path, "partialSummaries.json"), orient="records", lines=True)
+        
         metrics = scoring.score_dancer(
             gen_sums=gen_sums,
             target_sums=abstracts,
             article_ids=article_ids,
             section_ids=section_ids,
-            out_path=out_path,
+            #HA: below the summaries are saved without filtering on section types. To distinguish between the folders, the outpath is adjusted here
+            out_path=os.path.join(out_path, "filtered"),
             select_sections=select_sections,
+            write_gens=write_rouge)
+        #HA: I want to write the files without filtering on section type as well
+        metrics = scoring.score_dancer(
+            gen_sums=gen_sums,
+            target_sums=abstracts,
+            article_ids=article_ids,
+            section_ids=section_ids,
+            out_path=os.path.join(out_path, "unfiltered"),
             write_gens=write_rouge)
     else:
         metrics = scoring.score_standard(
@@ -113,11 +145,14 @@ def main():
             out_path=out_path,
             write_gens=write_rouge)
 
+    #HA: generation of the summary files and the scoring are seperated by me. For scoring another script by me is used, which also computes the BERTScore. Therefore, teh following is commented out
+    """
     if write_rouge:
         scores_dict = scoring.score_outputs(out_path)
         scoring.rouge_log(scores_dict, out_path)
     else:
         print(metrics)
+    """
 
 
 if __name__ == "__main__":
