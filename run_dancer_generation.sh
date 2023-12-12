@@ -1,12 +1,13 @@
 python src/dancer_generation.py \
     --mode dancer \
-    --model_path dancer_pubmed/models \
+    --model_path google/pegasus-xsum \
     --output_path dancer_pubmed \
-    --data_path /home/jupyter/pubmed-dataset/processed/pubmed/test.json \
+    --dataset_name Hendrik-a/dancer-data \
     --text_column document \
     --summary_column summary \
     --write_rouge 1 \
     --seed 100 \
     --test_batch_size 6 \
     --max_source_length 512 --max_summary_length 128 \
-    --num_beams 5
+    --num_beams 1 \
+    --max_test_samples 20
