@@ -121,25 +121,18 @@ def main():
     gen_sums, target_sums, article_ids, section_ids, abstracts = generate_summaries(test_loader, args, device=device)
     
     print("Scoring generated summaries")
-    if args.mode == "dancer":
-
-        #HA: I want to save the partial generated summaries with the partial target summaries
-        df = pd.DataFrame(
-            list(zip(article_ids, section_ids, target_sums, gen_sums)),
-            columns=["article_id", "section_id", "target_sum", "gen_sum"])
-
-        df.to_json(os.path.join(out_path, "partialSummaries.json"), orient="records", lines=True)
+    if args.mode == "dancer":        
         
         metrics = scoring.score_dancer(
             gen_sums=gen_sums,
             target_sums=abstracts,
             article_ids=article_ids,
             section_ids=section_ids,
-            #HA: below the summaries are saved without filtering on section types. To distinguish between the folders, the outpath is adjusted here
+            #HA: below the summaries are saved without filtering on section types. To distinguish between the folders, the outpath is adjusted to use "filtered" subdirectory
             out_path=os.path.join(out_path, "filtered"),
             select_sections=select_sections,
             write_gens=write_rouge)
-        #HA: I want to write the files without filtering on section type as well
+        #HA: I want to write the files without filtering on section type as well, so another score_dancer call was added
         metrics = scoring.score_dancer(
             gen_sums=gen_sums,
             target_sums=abstracts,
@@ -147,6 +140,13 @@ def main():
             section_ids=section_ids,
             out_path=os.path.join(out_path, "unfiltered"),
             write_gens=write_rouge)
+
+        #HA: Added the following to save the partial generated summaries with the partial target summaries to calculate scores.
+        df = pd.DataFrame(
+            list(zip(article_ids, section_ids, target_sums, gen_sums)),
+            columns=["article_id", "section_id", "target_sum", "gen_sum"])
+        df.to_csv(os.path.join(out_path, "partialSummaries.csv"), encoding="utf-8", index=False)
+        
     else:
         metrics = scoring.score_standard(
             gen_sums=gen_sums,
