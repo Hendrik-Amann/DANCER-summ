@@ -84,7 +84,8 @@ def write_gen(df, out_path):
     ref_path = os.path.join(out_path, "ref")
     if os.path.exists(out_path):
         shutil.rmtree(out_path)
-    os.mkdir(out_path)
+    #HA: changed the following line from mkdir to makedirs (generate subdirectories)
+    os.makedirs(out_path)
     os.mkdir(hyp_path)
     os.mkdir(ref_path)
                 
