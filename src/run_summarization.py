@@ -27,13 +27,15 @@ from dataclasses import dataclass, field
 #HA: the Dict import was not part of the original DANCER code. It has been added for the ismpleRouge_objective function used later
 from typing import Optional, Dict
 
-import nltk  # Here to have a nice missing dependency error message early on
+#HA: nltk used for computing RougeLSum, but it is not computed by me to speed up evaluation
+#import nltk  # Here to have a nice missing dependency error message early on
 import numpy as np
 from datasets import load_dataset, load_metric
 
 import torch
 import transformers
-from filelock import FileLock
+#HA: used for import nltk, but nltk not used by me
+#from filelock import FileLock
 from transformers import (
     AutoConfig,
     AutoModelForSeq2SeqLM,
@@ -68,9 +70,9 @@ from customTrain import HA_Trainer
 import glob
 import warnings
 
-
-with FileLock(".lock") as lock:
-    nltk.download("punkt", quiet=True)
+#HA: nltk not used by me, explained above
+#with FileLock(".lock") as lock:
+#    nltk.download("punkt", quiet=True)
 
 
 logger = logging.getLogger(__name__)
