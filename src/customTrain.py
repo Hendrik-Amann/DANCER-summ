@@ -291,7 +291,7 @@ def ha_clean_chkpts(chkpt_dir):
 class HA_Trainer(Seq2SeqTrainer):
 
     def __init__(self, *args, **kwargs):
-        super(CustomTrainer, self).__init__(*args, **kwargs)
+        super(HA_Trainer, self).__init__(*args, **kwargs)
 
     def _tune_save_checkpoint(self):
         from ray import tune
