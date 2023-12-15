@@ -245,7 +245,37 @@ class DataTrainingArguments:
     #HA: path to store ray objectives (trials) in
     storage_path: str = field(
         default="./ray_results",
-        metadata = {"help:" "Folder to store ray objectives (trials) in."},
+        metadata = {"help": "Folder to store ray objectives (trials) in."},
+    )
+    #HA: added
+    n_agents: int = field(
+        default=1,
+        metadata = {"help": "Number of agents/trials/objectives"},
+    )
+    #HA: added
+    training_duration: int = field(
+        default=1,
+        metadata = {"help": "Duration of training in minutes"},
+    )
+    #HA: added
+    lr_upper: float = field(
+        default=5e-3,
+        metadata = {"help": "Upper bound for learning rate during hyperparameter search"}
+    )
+    #HA: added
+    lr_lower: float = field(
+        default=2e-5,
+        metadata = {"help": "Lower bound for learning rate during hyperparameter search"}
+    )
+    #HA: added
+    wd_upper: float = field(
+        default=0.01,
+        metadata = {"help": "Upper bound for weight decay during hyperparameter search"}
+    )
+    #HA: added
+    wd_lower: float = field(
+        default=0.0,
+        metadata = {"help": "Lower bound for weight decay during hyperparameter search"}
     )
 
     def __post_init__(self):
@@ -352,6 +382,10 @@ def main():
 
     # Set seed before initializing model.
     set_seed(training_args.seed)
+
+    #HA: added to use tf32
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
 
     # Get the datasets: you can either provide your own CSV/JSON training and evaluation files (see below)
     # or just provide the name of one of the public datasets available on the hub at https://huggingface.co/datasets/
@@ -680,8 +714,8 @@ def main():
         mode="max",
         #the lower and upper bound of the hyperparameters
         hyperparam_bounds={
-            "learning_rate": [4e-6, 8e-5],
-            "weight_decay": [0.0, 0.01]
+            "learning_rate": [data_args.lr_lower, data_args.lr_upper],
+            "weight_decay": [data_args.wd_lower, data_args.wd_upper]
         },
     )
 
@@ -719,14 +753,14 @@ def main():
     best_trial = trainer.hyperparameter_search(
         direction="max",
         backend="ray",
-        n_trials=2,
+        n_trials=data_args.n_agents,
         hp_space=lambda _: tune_config,
         scheduler=scheduler,
         progress_report=reporter,
         checkpoint_score_attr="objective",
         compute_objettive=simpleRouge_objective,
         storage_path=data_args.storage_path,
-        time_budget_s=60*8,
+        time_budget_s=60*data_args.training_duration,
         #HA: checkpoint config does not work reliably, but it does not hurt to have it here
         checkpoint_config=CheckpointCOnfig(
             num_to_keep=3,
