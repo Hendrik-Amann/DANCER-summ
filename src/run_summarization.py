@@ -68,6 +68,9 @@ from customTrain import HA_Trainer
 import glob
 import warnings
 
+#HA: for reading trainer_state.json when searching for best chkpt
+import json
+
 with FileLock(".lock") as lock:
     nltk.download("punkt", quiet=True)
 
