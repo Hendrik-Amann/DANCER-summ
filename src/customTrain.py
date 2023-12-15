@@ -26,6 +26,9 @@ from transformers.training_args import ParallelMode  # noqa: E402
 from transformers.utils import ENV_VARS_TRUE_VALUES, is_torch_tpu_available, is_datasets_available  # noqa: E402
 import importlib.util
 
+#HA: used to write own Trainer
+from transformers import Seq2SeqTrainer
+
 #HA: for convert_state_flType function
 import numpy
 
