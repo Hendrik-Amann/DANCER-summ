@@ -464,6 +464,8 @@ def main():
     #HA: the model init function ray tune uses
     def model_init(trial):
         model = AutoModelForSeq2SeqLM.from_pretrained(model_args.model_name_or_path, config=config)
+        #HA: enabling gradient checkpointing
+        model.config.gradient_checkpointing=True
         return model
 
     #HA: MBartTokenizer is not used by me and the model variable is not getting defined as explained above. Therefore, following section can be commented out
