@@ -68,7 +68,6 @@ from customTrain import HA_Trainer
 import glob
 import warnings
 
-HA: nltk not used by me, explained above
 with FileLock(".lock") as lock:
     nltk.download("punkt", quiet=True)
 
@@ -434,7 +433,7 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
         #HA: added to set num_beams to 1
-        num_beams=data_args.num_beams
+        num_beams=data_args.num_beams,
         #HA:max_new_tokens and max_length both controll how long the target sequence is. PEGASUS-X has default of 16384, which leads to very slow generation
         max_new_tokens=data_args.max_target_length,
         max_length=data_args.max_target_length,
@@ -564,8 +563,8 @@ def main():
 
         #HA: added this to set global attention on first token for LED as suggested by Beltagy et al.
         #HA: see https://colab.research.google.com/drive/12LjJazBl7Gam0XBPy_y0CTOJZeZ34c2v?usp=sharing
-	if model_args.model_name_or_path == "allenai/led-base-16384":
-	    model_inputs["global_attention_mask"] = len(model_inputs["input_ids"]) * [[0 for _ in range(len(model_inputs["input_ids"][0]))]
+        if model_args.model_name_or_path == "allenai/led-base-16384":
+            model_inputs["global_attention_mask"] = len(model_inputs["input_ids"]) * [[0 for _ in range(len(model_inputs["input_ids"][0]))]]
             model_inputs["global_attention_mask"][0][0] = 1
         # Setup the tokenizer for targets
         with tokenizer.as_target_tokenizer():
