@@ -27,15 +27,13 @@ from dataclasses import dataclass, field
 #HA: the Dict import was not part of the original DANCER code. It has been added for the ismpleRouge_objective function used later
 from typing import Optional, Dict
 
-#HA: nltk used for computing RougeLSum, but it is not computed by me to speed up evaluation
-#import nltk  # Here to have a nice missing dependency error message early on
+import nltk  # Here to have a nice missing dependency error message early on
 import numpy as np
 from datasets import load_dataset, load_metric
 
 import torch
 import transformers
-#HA: used for import nltk, but nltk not used by me
-#from filelock import FileLock
+from filelock import FileLock
 from transformers import (
     AutoConfig,
     AutoModelForSeq2SeqLM,
@@ -70,9 +68,9 @@ from customTrain import HA_Trainer
 import glob
 import warnings
 
-#HA: nltk not used by me, explained above
-#with FileLock(".lock") as lock:
-#    nltk.download("punkt", quiet=True)
+HA: nltk not used by me, explained above
+with FileLock(".lock") as lock:
+    nltk.download("punkt", quiet=True)
 
 
 logger = logging.getLogger(__name__)
@@ -114,12 +112,12 @@ class ModelArguments:
     )
     #HA: added to push the best model to huggingface hub, after the training
     ha_push_to_hub: bool = field(
-	default=False,
-	metadata = {"help:" "Whether or not to push best model checkpoint to huggingface hub."},
+        default=False,
+        metadata = {"help:" "Whether or not to push best model checkpoint to huggingface hub."},
     )
     ha_out_name: Optional[str] = field(
-	    default = None,
-	    metadata={"help:" "Name of saved the model"}
+        default = None,
+        metadata={"help:" "Name of saved the model"}
     )
 
 
@@ -395,6 +393,13 @@ def main():
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
+        #HA: added to set num_beams to 1
+        num_beams=data_args.num_beams
+        #HA:max_new_tokens and max_length both controll how long the target sequence is. PEGASUS-X has default of 16384, which leads to very slow generation
+        max_new_tokens=data_args.max_target_length,
+        max_length=data_args.max_target_length,
+        #HA: added to save GPU memory
+        gradient_checkpointing=True,
     )
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
@@ -402,6 +407,7 @@ def main():
         use_fast=model_args.use_fast_tokenizer,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
+        config=config,
     )
     #HA: ray does not use a model, but the model_init to initialize a model for each trial, so this can be commented out
     #model = AutoModelForSeq2SeqLM.from_pretrained(
@@ -414,7 +420,7 @@ def main():
     #)
     #HA: the model init function ray tune uses
     def model_init(trial):
-        model = AutoModelForSeq2SeqLM.from_pretrained(model_args.model_name_or_path, gradient_checkpointing=True, use_cache=False)
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_args.model_name_or_path, config=config)
         return model
 
     #HA: MBartTokenizer is not used by me and the model variable is not getting defined as explained above. Therefore, following section can be commented out
@@ -601,13 +607,12 @@ def main():
         preds = [pred.strip() for pred in preds]
         labels = [label.strip() for label in labels]
 
-        #HA: rougeLSum will not be used during training, due to speed up the evaluation, so the following can be commented out
         # rougeLSum expects newline after each sentence
-        #if metric_name == "rouge":
-        #    preds = ["\n".join(nltk.sent_tokenize(pred)) for pred in preds]
-        #    labels = ["\n".join(nltk.sent_tokenize(label)) for label in labels]
-        #else:  # sacrebleu
-        #    labels = [[label] for label in labels]
+        if metric_name == "rouge":
+            preds = ["\n".join(nltk.sent_tokenize(pred)) for pred in preds]
+            labels = ["\n".join(nltk.sent_tokenize(label)) for label in labels]
+        else:  # sacrebleu
+            labels = [[label] for label in labels]
 
         return preds, labels
 
@@ -625,15 +630,14 @@ def main():
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
 
         if metric_name == "rouge":
-            #HA: limiting the rouge_types to rouge2 to speed up the evaluation
-            result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True, rouge_types=["rouge2"])
+            result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
             # Extract a few results from ROUGE
             result = {key: value.mid.fmeasure * 100 for key, value in result.items()}
         else:
             result = metric.compute(predictions=decoded_preds, references=decoded_labels)
             result = {"bleu": result["score"]}
 
-        #Prediction lenghts are not of interest, to speed up the evaluation it is commented out
+        #HA: Prediction lengths are not of interest, to speed up the evaluation it is commented out
         #prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
         #result["gen_len"] = np.mean(prediction_lens)
         result = {k: round(v, 4) for k, v in result.items()}
@@ -707,6 +711,9 @@ def main():
 
     #HA to ensure checkpointing
     trainer.use_tune_checkpoints=True
+
+    #HA: If not set, a warning message appears and suggests to set the env variable. Works without setting it too
+    os.environ["TOKENIZERS_PARALLELISM"]="1"
 
     #HA: running the hyperparameter search
     best_trial = trainer.hyperparameter_search(
@@ -789,7 +796,7 @@ def main():
                     
     #test_metrics = metrics
 
-    #HA: there is no model defined, so the del can be removed
+    #HA: there is no model defined, so the del should be removed
     del trainer #, model
     gc.collect()
     torch.cuda.empty_cache()
