@@ -20,5 +20,7 @@ python src/run_summarization.py \
     --save_strategy steps \
     --save_steps 300 \
     --eval_steps 300 \
-    --logging_steps 100 
+    --logging_steps 100 \
+    --max_steps 100000000000000 \
+    --training_duration 1
     
