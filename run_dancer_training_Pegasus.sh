@@ -1,5 +1,6 @@
 python src/run_summarization.py \
     --model_name_or_path google/pegasus-large --tokenizer_name google/pegasus-large \
+    --model_revision dec7796 \
     --do_train \
     --do_eval \
     --task summarization \
