@@ -711,13 +711,14 @@ def main():
         },
         #HA: eval_rouge2 and objective should be the same. Kind of a sanity check to report both
         metric_columns=["eval_rouge2", "objective", "eval_rouge1", "eval_rougeL", "eval_rougeLsum", "eval_loss", "eval_runtime"],
+        max_report_frequency=60,
     )
 
     #HA: the algorithm used to improve the objective
     scheduler = ray.tune.schedulers.pb2.PB2(
         #HA: this allows perturbation at every eval step
         time_attr="training_iteration",
-        peturbation_interval=1,
+        perturbation_interval=1,
         #HA: the metric to optimize. eval_rouge2 could have been used here, but to fit the ray tune framework, I set it to objective
         metric="objective",
         #HA: the direction the objective should have; With max: the higher the objective, the better
