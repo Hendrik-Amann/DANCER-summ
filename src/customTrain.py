@@ -25,6 +25,7 @@ from transformers.trainer_callback import ProgressCallback, TrainerCallback  # n
 from transformers.training_args import ParallelMode  # noqa: E402
 from transformers.utils import ENV_VARS_TRUE_VALUES, is_torch_tpu_available, is_datasets_available  # noqa: E402
 import importlib.util
+import logging
 
 #HA: used to write own Trainer
 from transformers import Seq2SeqTrainer
@@ -100,6 +101,8 @@ SCALER_NAME = "scaler.pt"
 #HA: for save_to_json function overwrite, these imports are needed
 import dataclasses
 import json
+
+logger = logging.get_logger(__name__)
 
 #HA: copied hp_search_ray function from transformers trainer https://github.com/huggingface/transformers/blob/v4.29-release/src/transformers/trainer.py
 #HA: changes are marked by comments
