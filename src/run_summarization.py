@@ -440,7 +440,7 @@ def main():
         max_length=data_args.max_target_length,
         #HA: added to save GPU memory
         gradient_checkpointing=True,
-        use_cache=model_args.HA_use_cache,
+        use_cache=model_args.ha_use_cache,
     )
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
