@@ -763,7 +763,7 @@ def main():
         scheduler=scheduler,
         progress_reporter=reporter,
         checkpoint_score_attr="objective",
-        compute_objettive=simpleRouge_objective,
+        compute_objective=simpleRouge_objective,
         storage_path=data_args.storage_path,
         time_budget_s=60*data_args.training_duration,
         #HA: checkpoint config does not work reliably, but it does not hurt to have it here
