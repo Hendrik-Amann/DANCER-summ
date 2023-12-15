@@ -761,7 +761,7 @@ def main():
         n_trials=data_args.n_agents,
         hp_space=lambda _: tune_config,
         scheduler=scheduler,
-        progress_report=reporter,
+        progress_reporter=reporter,
         checkpoint_score_attr="objective",
         compute_objettive=simpleRouge_objective,
         storage_path=data_args.storage_path,
