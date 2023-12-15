@@ -25,10 +25,11 @@ from transformers.trainer_callback import ProgressCallback, TrainerCallback  # n
 from transformers.training_args import ParallelMode  # noqa: E402
 from transformers.utils import ENV_VARS_TRUE_VALUES, is_torch_tpu_available, is_datasets_available  # noqa: E402
 import importlib.util
-import logging
 
 #HA: used to write own Trainer
 from transformers import Seq2SeqTrainer
+
+import torch
 
 #HA: for convert_state_flType function
 import numpy
@@ -45,6 +46,7 @@ import shutil
 import sys
 import time
 import warnings
+import logging
 from transformers.trainer_utils import (ShardedDDPOption)
 
 from transformers.utils import (
@@ -69,6 +71,7 @@ from transformers.utils import (
     is_torch_tpu_available,
     logging,
     strtobool,
+    default_compute_objective,
 )
 from transformers.trainer_pt_utils import (
     DistributedLengthGroupedSampler,
