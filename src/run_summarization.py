@@ -112,16 +112,16 @@ class ModelArguments:
     #HA: added to push the best model to huggingface hub, after the training
     ha_push_to_hub: bool = field(
         default=False,
-        metadata = {"help:" "Whether or not to push best model checkpoint to huggingface hub."},
+        metadata = {"help": "Whether or not to push best model checkpoint to huggingface hub."},
     )
     ha_out_name: Optional[str] = field(
         default = None,
-        metadata={"help:" "Name of saved the model"}
+        metadata={"help": "Name of saved the model"}
     )
     #HA: added to save memory
     ha_use_cache: bool = field(
         default=False,
-        metadata = {"help:" "Sets use_cache in model.config"},
+        metadata = {"help": "Sets use_cache in model.config"},
     )
 
 
