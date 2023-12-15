@@ -119,6 +119,11 @@ class ModelArguments:
         default = None,
         metadata={"help:" "Name of saved the model"}
     )
+    #HA: added to save memory
+    ha_push_to_hub: bool = field(
+        default=False,
+        metadata = {"help:" "Sets use_cache in model.config"},
+    )
 
 
 @dataclass
@@ -278,6 +283,7 @@ class DataTrainingArguments:
         metadata = {"help": "Lower bound for weight decay during hyperparameter search"}
     )
 
+	
     def __post_init__(self):
         if self.dataset_name is None and self.train_file is None and self.validation_file is None:
             raise ValueError("Need either a dataset name or a training/validation file.")
@@ -434,6 +440,7 @@ def main():
         max_length=data_args.max_target_length,
         #HA: added to save GPU memory
         gradient_checkpointing=True,
+        use_cache=model_args.HA_use_cache,
     )
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
@@ -697,10 +704,9 @@ def main():
         parameter_columns={
             "weight_decay": "w_decay",
             "learning_rate": "lr",
-            "num_train_epochs": "num_epochs",
         },
         #HA: eval_rouge2 and objective should be the same. Kind of a sanity check to report both
-        metric_columns=["eval_rouge2", "objective"],
+        metric_columns=["eval_rouge2", "objective", "eval_rouge1", "eval_rougeL", "eval_rougeLsum", "eval_loss", "eval_runtime"],
     )
 
     #HA: the algorithm used to improve the objective
