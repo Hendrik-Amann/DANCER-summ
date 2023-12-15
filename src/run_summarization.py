@@ -120,7 +120,7 @@ class ModelArguments:
         metadata={"help:" "Name of saved the model"}
     )
     #HA: added to save memory
-    ha_push_to_hub: bool = field(
+    ha_use_cache: bool = field(
         default=False,
         metadata = {"help:" "Sets use_cache in model.config"},
     )
