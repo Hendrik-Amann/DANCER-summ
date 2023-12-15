@@ -913,7 +913,7 @@ def main():
             chkptForHfHub = firstBestChkpt[0]
 
     if chkptForHub and model_args.ha_push_to_hub:
-        model = AutoModelForSeq2SeqLM.from_pretrained(chptForHub)
+        model = AutoModelForSeq2SeqLM.from_pretrained(chkptForHub)
         model.push_to_hub(model_args.ha_out_name)
             
 def _mp_fn(index):
