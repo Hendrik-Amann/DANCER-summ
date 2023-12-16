@@ -1,6 +1,6 @@
 python src/run_summarization.py \
     --model_name_or_path google/pegasus-x-base --tokenizer_name google/pegasus-x-base \
-    --revision cd8a69a \
+    --model_revision cd8a69a \
     --do_train \
     --do_eval \
     --task summarization \
