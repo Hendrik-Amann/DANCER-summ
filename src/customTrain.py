@@ -6,7 +6,10 @@ from transformers.trainer_utils import (
     PREFIX_CHECKPOINT_DIR,
     IntervalStrategy
 )
-from transformers.integrations import (TensorBoardCallback)
+from transformers.integrations import (
+    TensorBoardCallback,
+    default_compute_objective,
+)
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 from transformers.integrations import (
     default_hp_search_backend,
@@ -71,7 +74,6 @@ from transformers.utils import (
     is_torch_tpu_available,
     logging,
     strtobool,
-    default_compute_objective,
 )
 from transformers.trainer_pt_utils import (
     DistributedLengthGroupedSampler,
