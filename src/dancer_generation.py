@@ -98,6 +98,10 @@ def read_args():
     parser.add_argument("--test_batch_size", type=int, default=2, help="")
     parser.add_argument("--num_beams", type=int, default=3, help="")
 
+    #HA: added revisions to specify commits
+    parser.add_argument("--tokenizer_revision", type=st, help="")
+    parser.add_argument("--model_revision", type=st, help="")
+
     args, unknown = parser.parse_known_args()
 
     return args, unknown
