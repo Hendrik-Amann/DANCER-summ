@@ -4,7 +4,8 @@ from transformers.trainer_utils import (
     BestRun,
     EvaluationStrategy,
     PREFIX_CHECKPOINT_DIR,
-    IntervalStrategy
+    IntervalStrategy,
+    default_compute_objective,
 )
 from transformers.integrations import (
     TensorBoardCallback,
