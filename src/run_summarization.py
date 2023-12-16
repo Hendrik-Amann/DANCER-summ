@@ -61,6 +61,7 @@ from ray.tune import CLIReporter
 import GPy
 import sklearn
 from ray.tune.examples.pbt_function import pbt_function
+from ray.tune.schedulers.pb2 import PB2
 from ray.tune.schedulers.pb2_utils import (normalize, optimize_acq, select_length, UCB, standardize, TV_SquaredExp,)
 #HA using my own Trainer
 from customTrain import HA_Trainer
