@@ -30,10 +30,12 @@ def load_model(args, device):
     """Load model and tokenizer"""
     print(f"Loading tokenizer {args.tokenizer_name if args.tokenizer_name else args.model_path}")
     tokenizer = AutoTokenizer.from_pretrained(
-        args.tokenizer_name if args.tokenizer_name else args.model_path)
+        args.tokenizer_name if args.tokenizer_name else args.model_path,
+        args.tokenizer_revision)
     
     print(f"Loading model from {args.model_path}")
     model = AutoModelForSeq2SeqLM.from_pretrained(
-        args.model_path).to(device)
+        args.model_path,
+        args.model_revision).to(device)
     
     return model, tokenizer
