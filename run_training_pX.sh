@@ -24,6 +24,7 @@ python src/run_summarization.py \
     --logging_steps 25 \
     --max_steps 100000000000000 \
     --training_duration 1440 \
+    --n_agents 4 \
     --ha_push_to_hub \
     --ha_out_name pegasus-x-base-arxiv \
     --ha_use_cache \
