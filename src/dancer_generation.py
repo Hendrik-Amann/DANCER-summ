@@ -99,8 +99,8 @@ def read_args():
     parser.add_argument("--num_beams", type=int, default=3, help="")
 
     #HA: added revisions to specify commits
-    parser.add_argument("--tokenizer_revision", type=st, help="")
-    parser.add_argument("--model_revision", type=st, help="")
+    parser.add_argument("--tokenizer_revision", type=str, help="")
+    parser.add_argument("--model_revision", type=str, help="")
 
     args, unknown = parser.parse_known_args()
 
