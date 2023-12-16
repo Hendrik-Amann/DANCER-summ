@@ -1,6 +1,6 @@
 python src/run_summarization.py \
     --model_name_or_path allenai/led-base-16384 --tokenizer_name allenai/led-base-16384 \
-    --revision 3833578 \
+    --model_revision 3833578 \
     --do_train \
     --do_eval \
     --task summarization \
