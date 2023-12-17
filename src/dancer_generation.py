@@ -30,7 +30,7 @@ def generate_summaries(test_loader, args, device):
             return_tensors='pt')
 
         #HA: for LED set global attention on first token, as suggested by Beltagy et al. (2020) https://arxiv.org/abs/2004.05150
-        if args.model_path == "Hendrik-a/LED-base-16384-arXiv":
+        if args.tokenizer_name == "allenai/led-base-16384":
             model_inputs["global_attention_mask"] = len(model_inputs["input_ids"]) * [[0 for _ in range(len(model_inputs["input_ids"][0]))]]
             model_inputs["global_attention_mask"][0][0] = 1
         
