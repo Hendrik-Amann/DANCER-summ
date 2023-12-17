@@ -30,19 +30,28 @@ def generate_summaries(test_loader, args, device):
             return_tensors='pt')
 
         #HA: for LED set global attention on first token, as suggested by Beltagy et al. (2020) https://arxiv.org/abs/2004.05150
-        if args.tokenizer_name == "allenai/led-base-16384":
-            model_inputs["global_attention_mask"] = len(model_inputs["input_ids"]) * [[0 for _ in range(len(model_inputs["input_ids"][0]))]]
-            model_inputs["global_attention_mask"][0][0] = 1
-        
         input_ids = model_inputs['input_ids'].to(device)
-        sent_outputs = model.generate(
-            input_ids,
-            num_beams=args.num_beams,
-            early_stopping=True,
+        if args.tokenizer_name == "allenai/led-base-16384":
+            attention_mask = model_inputs["attention_mask"].to(device)
+            global_attention_mask = torch.zeros_like(attention_mask)
+            global_attention_mask[:, 0] = 1
+            sent_outputs = model.generate(
+                input_ids, attention_mask=attention_mask, global_attention_mask=global_attention_mask,
+                num_beams=args.num_beams,
+                length_penalty=args.length_penalty,
+                no_repeat_ngram_size=args.no_repeat_ngram_size,
+                early_stopping=True)
+        else:
+            sent_outputs = model.generate(
+                input_ids,
+                num_beams=args.num_beams,
+                length_penalty=args.length_penalty,
+                no_repeat_ngram_size=args.no_repeat_ngram_size,
+                early_stopping=True,
             #HA: dictionary and output_scores not used anyway, so I removed it. Should increase performance a bit, since no dict has to be returned
             #return_dict_in_generate=True,
             #output_scores=True
-        )  # only one beam should be equivalent to greedy,
+            )  # only one beam should be equivalent to greedy,
         
         gen_sum = [
             tokenizer.decode(
@@ -65,7 +74,7 @@ def generate_summaries(test_loader, args, device):
         else:
             article_ids += batch["article_id"]
 
-        #HA: I want to also add the article_ids for the non-DANCER dataset, where there are no section_ids or abstracts. Section above already implements this, so the following should be commented out
+        #HA: I want to include the article_ids also for the non-DANCER dataset, where there are no section_ids or abstracts. Section above already implements this, so the following should be commented out
         """
         try:
             article_ids += batch["article_id"]
@@ -97,6 +106,9 @@ def read_args():
     parser.add_argument("--seed", type=int, default=10, help="")
     parser.add_argument("--test_batch_size", type=int, default=2, help="")
     parser.add_argument("--num_beams", type=int, default=3, help="")
+    #HA: added no_repeat_ngram_size and length penalty
+    parser.add_argument("--no_repeat_ngram_size", type=int, default=3, help="")
+    parser.add_argument("--length_penalty", type=int, default=3, help="")
 
     #HA: added revisions to specify commits
     parser.add_argument("--tokenizer_revision", type=str, help="")
