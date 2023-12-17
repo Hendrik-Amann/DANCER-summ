@@ -9,7 +9,6 @@ from transformers.trainer_utils import (
 )
 from transformers.integrations import (
     TensorBoardCallback,
-    default_compute_objective,
 )
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 from transformers.integrations import (
