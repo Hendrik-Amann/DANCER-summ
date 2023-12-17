@@ -11,6 +11,20 @@ from rouge_score import rouge_scorer
 with FileLock(".lock") as lock:
   nltk.download("punkt", quiet=True)
 
+def save_score_df(df, file_name):
+  means= df[df.columns.difference(['article_id'])].mean()
+  means.name="mean"
+  medians= df[df.columns.difference(['article_id'])].median()
+  medians.name="median"
+  sds= df[df.columns.difference(['article_id'])].std()
+  sds.name="sd"
+  maxs = df[df.columns.difference(['article_id'])].max()
+  maxs.name="max"
+  mins = df[df.columns.difference(['article_id'])].min()
+  mins.name="min"
+  
+  pd.concat([means, medians, sds, maxs, mins], axis=1).to_csv(os.path.join(args.data_root, filename), encoding="utf-8", index=True)
+
 def read_args():
   parser = argparse.ArgumentParser()
   parser.add_argument("--data_root", type=str, help="")
@@ -31,9 +45,7 @@ def main():
       with open(ref) as f:
         ref_text = f.read()
       ref_text = re.sub("\n", " ", ref_text)
-
       id = ref.split("/")[-1][4:-4]
-
       hyp = glob.glob(os.path.join(args.data_root, "hyp", "hyp_"+id+".txt"))
       if len(hyp) == 0:
         print("No hyp file for article_id: ", id)
@@ -47,7 +59,7 @@ def main():
 
       bp, br, bf1 = bert.score(cands=[hyp_text], refs=[ref_text])
       row = {'article_id': id, "BertP": bp.item(), "BertR": br.item(), "BertF1": bf1.item()}
-
+      
       rscores = rouge.score(target=ref_text, prediction=hyp_text)
       for key in rscores.keys():
         row[key+'P'] = rscores[key][0] * 100
@@ -57,50 +69,28 @@ def main():
       res.append(row)
 
     df = pd.DataFrame.from_dict(res)
-
-    means= df[df.columns.difference(['article_id'])].mean()
-    means.name="mean"
-    medians= df[df.columns.difference(['article_id'])].median()
-    medians.name="median"
-    sds= df[df.columns.difference(['article_id'])].std()
-    sds.name="sd"
-    maxs = df[df.columns.difference(['article_id'])].max()
-    maxs.name="max"
-    mins = df[df.columns.difference(['article_id'])].min()
-    mins.name="min"
-
-    pd.concat([means, medians, sds, maxs, mins], axis=1).to_csv(os.path.join(args.data_root, "scores.csv"), encoding="utf-8", index=True)
+    save_score_df(df, "scores.csv")
     df.to_csv(os.path.join(args.data_root, "scores_details.csv"), encoding="utf-8", index=False)
 
   elif args.type=="partial":
     tdf = pd.read_csv(os.path.join(args.data_root, "partialSummaries.csv"))
     tdf = tdf.dropna()
-    for index, trow in tdf.iterrows():
-      bp, br, bf1 = bert.score(cands=[trow['gen_sum']], refs=[trow['target_sum']])
-
-      rrow = {'article_id': trow['article_id'], "BertP": bp.item(), "BertR": br.item(), "BertF1": bf1.item()}
-
-      rscores = rouge.score(target=trow['target_sum'], prediction=trow['gen_sum'])
+    for index, text_row in tdf.iterrows():
+      bp, br, bf1 = bert.score(cands=[text_row['gen_sum']], refs=[text_row['target_sum']])
+      score_row = {'article_id': text_row['article_id'], "BertP": bp.item(), "BertR": br.item(), "BertF1": bf1.item()}
+      rscores = rouge.score(target=text_row['target_sum'], prediction=text_row['gen_sum'])
       for key in rscores.keys():
-        rrow[key+'P'] = rscores[key][0] * 100
-        rrow[key+'R'] = rscores[key][1] * 100
-        rrow[key+'F1'] = rscores[key][2] * 100
-      res.append(rrow)
+        score_row[key+'P'] = rscores[key][0] * 100
+        score_row[key+'R'] = rscores[key][1] * 100
+        score_row[key+'F1'] = rscores[key][2] * 100
+      res.append(score_row)
     
     df = pd.DataFrame.from_dict(res)
-    means= df[df.columns.difference(['article_id'])].mean()
-    means.name="mean"
-    medians= df[df.columns.difference(['article_id'])].median()
-    medians.name="median"
-    sds= df[df.columns.difference(['article_id'])].std()
-    sds.name="sd"
-    maxs = df[df.columns.difference(['article_id'])].max()
-    maxs.name="max"
-    mins = df[df.columns.difference(['article_id'])].min()
-    mins.name="min"
-
-    pd.concat([means, medians, sds, maxs, mins], axis=1).to_csv(os.path.join(args.data_root, "partial_scores.csv"), encoding="utf-8", index=True)
-    df.to_csv(os.path.join(args.data_root, "partial_scores_details.csv"), encoding="utf-8", index=False)
+    select_sections = ["i", "m", "r", "c"]
+    save_score_df(df, "partial_unfiltered_scores.csv")
+    save_score_df(df[df['section_id'].isin(select_sections)], "partial_filtered_scores.csv")
+    df.to_csv(os.path.join(args.data_root, "partial_unfiltered_scores_details.csv"), encoding="utf-8", index=False)
+    df[df['section_id'].isin(select_sections)].to_csv(os.path.join(args.data_root, "partial_filtered_scores_details.csv"), encoding="utf-8", index=False)
 
 if __name__ == "__main__":
   main()
