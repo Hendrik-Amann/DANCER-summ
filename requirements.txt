@@ -3,7 +3,7 @@ pyspark==3.2.0
 pandas==2.1.0
 rouge_score==0.1.2
 nltk==3.8.1
-numpy==1.20.0
+numpy==1.23.5
 datasets==2.15.0
 torch==2.0.1
 ray[tune]==2.6.3
