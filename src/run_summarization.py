@@ -682,8 +682,8 @@ def main():
                 result = {'rouge1': 0, 'rouge2': 0, 'rougeL': 0, 'rougeLsum': 0}
             else:
                 result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
-            	# Extract a few results from ROUGE
-            	result = {key: value.mid.fmeasure * 100 for key, value in result.items()}
+                # Extract a few results from ROUGE
+                result = {key: value.mid.fmeasure * 100 for key, value in result.items()}
         else:
             result = metric.compute(predictions=decoded_preds, references=decoded_labels)
             result = {"bleu": result["score"]}
