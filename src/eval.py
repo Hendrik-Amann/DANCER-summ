@@ -12,7 +12,7 @@ from datasets import load_metric
 with FileLock(".lock") as lock:
   nltk.download("punkt", quiet=True)
 
-def save_score_df(df, file_name):
+def save_score_df(df, file_name, args):
   means= df[df.columns.difference(['article_id'])].mean()
   means.name="mean"
   medians= df[df.columns.difference(['article_id'])].median()
@@ -24,7 +24,7 @@ def save_score_df(df, file_name):
   mins = df[df.columns.difference(['article_id'])].min()
   mins.name="min"
   
-  pd.concat([means, medians, sds, maxs, mins], axis=1).to_csv(os.path.join(args.data_root, filename), encoding="utf-8", index=True)
+  pd.concat([means, medians, sds, maxs, mins], axis=1).to_csv(os.path.join(args.data_root, file_name), encoding="utf-8", index=True)
 
 def read_args():
   parser = argparse.ArgumentParser()
@@ -74,7 +74,7 @@ def main():
       res.append(row)
 
     df = pd.DataFrame.from_dict(res)
-    save_score_df(df, "scores.csv")
+    save_score_df(df, "scores.csv", args)
     df.to_csv(os.path.join(args.data_root, "scores_details.csv"), encoding="utf-8", index=False)
 
   elif args.type=="partial":
@@ -92,8 +92,8 @@ def main():
     
     df = pd.DataFrame.from_dict(res)
     select_sections = ["i", "m", "r", "c"]
-    save_score_df(df, "partial_unfiltered_scores.csv")
-    save_score_df(df[df['section_id'].isin(select_sections)], "partial_filtered_scores.csv")
+    save_score_df(df, "partial_unfiltered_scores.csv", args)
+    save_score_df(df[df['section_id'].isin(select_sections)], "partial_filtered_scores.csv", args)
     df.to_csv(os.path.join(args.data_root, "partial_unfiltered_scores_details.csv"), encoding="utf-8", index=False)
     df[df['section_id'].isin(select_sections)].to_csv(os.path.join(args.data_root, "partial_filtered_scores_details.csv"), encoding="utf-8", index=False)
 
