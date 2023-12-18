@@ -551,7 +551,13 @@ def main():
         decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
 
         if metric_name == "rouge":
-            result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
+
+            #HA: trained LED model had learned to produce always the same output regardless of the input. To counteract this, the rouge scores are set to zero if the produced output summaries are too similar to another
+            output_similarity = metric.compute(predictions=decoded_preds[1:], references=[decoded_preds[0] for i in range(len(decoded_preds)-1)])
+            if output_similarity['rouge2'].mid.fmeasure > 0.5:
+                result = {'rouge1': 0, 'rouge2': 0, 'rougeL': 0, 'rougeLsum': 0}
+            else:
+                result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
             # Extract a few results from ROUGE
             result = {key: value.mid.fmeasure * 100 for key, value in result.items()}
         else:
