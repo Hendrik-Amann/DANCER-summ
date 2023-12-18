@@ -1,7 +1,7 @@
 python src/dancer_generation.py \
     --mode standard \
-    --model_path Hendrik-a/led-base-16384-arxiv \
-    --model_revision c92038e4ca52ccf3ef0c2bce4d9711c01c9febbd \
+    --model_path Hendrik-a/pegasus-x-base-arxiv \
+    --model_revision be2f12575b4d281f7f584ea40b8bf6702e1394e6 \
     --tokenizer_name google/pegasus-x-base \
     --tokenizer_revision cd8a69a4c88a469312423199b8dcd331f6af8b08 \
     --output_path pX \
