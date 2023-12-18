@@ -13,7 +13,11 @@ def init_loader(args):
         extension = args.data_path.split(".")[-1]
         datasets = load_dataset(extension, data_files=data_files)
 
-    test_dataset = datasets["test"]
+    #HA: added this to generate summaries for validation split
+    if args.split == "validation":
+        test_dataset = datasets[args.split]
+    else:
+        test_dataset = datasets["test"]
     if args.max_test_samples is not None:
         test_dataset = test_dataset.select(range(args.max_test_samples))
     
