@@ -58,10 +58,21 @@ def generate_summaries(test_loader, args, device):
                 g, skip_special_tokens=True,
                 #HA: originally set to False, but I set it to True. It removes redundant white spaces
                 #HA: originally sent_outputs["sequences"] because it returend a dict, but I changed it to only returning the tensors, so it had to be changed to sent_outputs
-                clean_up_tokenization_spaces=False) for g in sent_outputs]
+                clean_up_tokenization_spaces=True) for g in sent_outputs]
 
         gen_sums += gen_sum
-        target_sums += batch[args.summary_column]
+
+        #HA: added to analyse validation scores
+        if args.split == "validation":
+            target_sums += [
+                tokenizer.decode(
+                    g, skip_special_tokens=True, clean_up_tokenization_spaces=True
+                )
+                for g in tokenizer(batch[args.summary_column], max_length=args.max_source_length, truncation=True, padding=True, return_tensors='pt'
+                )['input_ids']
+            ]
+        else:
+            target_sums += batch[args.summary_column]
 
         #HA: in the original code, there was no if-else statement. Only the section commented out below. Reasoning in comment below
         if args.mode == "dancer":
@@ -109,6 +120,8 @@ def read_args():
     #HA: added no_repeat_ngram_size and length penalty
     parser.add_argument("--no_repeat_ngram_size", type=int, default=3, help="")
     parser.add_argument("--length_penalty", type=int, default=3, help="")
+    #HA: added to analyse validation scores
+    parser.add_argument("--split", type=str, help="")
 
     #HA: added revisions to specify commits
     parser.add_argument("--tokenizer_revision", type=str, help="")
