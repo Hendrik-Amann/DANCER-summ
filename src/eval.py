@@ -7,6 +7,7 @@ import glob
 import pandas as pd
 from bert_score import BERTScorer
 from rouge_score import rouge_scorer
+from datasets import load_metric
 
 with FileLock(".lock") as lock:
   nltk.download("punkt", quiet=True)
@@ -59,6 +60,10 @@ def main():
 
       bp, br, bf1 = bert.score(cands=[hyp_text], refs=[ref_text])
       row = {'article_id': id, "BertP": bp.item(), "BertR": br.item(), "BertF1": bf1.item()}
+
+      #load_metric is a wrapper around rouge. Used load_metric instead of rouge here since it offers aggregated results
+      metric = load_metric("rouge")
+      print("Rouge scores across generated summaries:", metric.compute(predictions=decoded_preds, references=[decoded_preds[0] for i in range(len(decoded_preds))]))
       
       rscores = rouge.score(target=ref_text, prediction=hyp_text)
       for key in rscores.keys():
