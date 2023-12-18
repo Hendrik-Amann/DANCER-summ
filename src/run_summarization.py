@@ -779,10 +779,6 @@ def main():
         storage_path=data_args.storage_path,
         time_budget_s=60*data_args.training_duration,
         #HA: checkpoint config does not work reliably, but it does not hurt to have it here
-        checkpoint_config=CheckpointConfig(
-            num_to_keep=3,
-            checkpoint_score_attribute="objective",
-        ),
     )
 
     #HA: The training function is replaced with the population based bandits training, so the original DANCER training code is commented out
