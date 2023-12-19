@@ -700,7 +700,7 @@ def main():
     #HA: this is the intial set of parameters, during permutation the hyperparam_bounds in the PB2 class wil be used
     #HA: the hp_space in the hyperparameter_search method cannot be empty, so I provide some values here
     tune_config = {
-        "weight_decay": tune.choice([0.0, 0.01]),
+        "weight_decay": tune.choice([data_args.wd_lower, data_args.wd_upper]),
     }
 
     #HA: the objective to be improved by population based bandits.
