@@ -1,0 +1,34 @@
+python src/run_summarization.py \
+    --model_name_or_path allenai/led-base-16384 --tokenizer_name allenai/led-base-16384 \
+    --model_revision 3833578 \
+    --do_train \
+    --do_eval \
+    --task summarization \
+    --dataset_name Hendrik-a/arxiv \
+    --text_column article_text \
+    --summary_column abstract_text \
+    --seed 100 \
+    --per_device_train_batch_size 4 \
+    --gradient_accumulation_steps 4 \
+    --per_device_eval_batch_size 8 \
+    --predict_with_generate \
+    --adafactor \
+    --max_source_length 16384 --max_target_length 256 --val_max_target_length 256 --pad_to_max_length True \
+    --num_beams 1 \
+    --tf32 True \
+    --lr_scheduler_type constant \
+    --evaluation_strategy steps \
+    --save_strategy steps \
+    --save_steps 75 \
+    --eval_steps 75 \
+    --logging_steps 25 \
+    --max_steps 100000000000000 \
+    --training_duration 1440 \
+    --n_agents 4 \
+    --ha_push_to_hub \
+    --ha_out_name led-base-16384-arxiv \
+    --ha_use_cache \
+    --output_dir dummyOutput \
+    --lr_upper 1e-4 \
+    --lr_lower 5e-7 \
+    --wd_upper 0.005
