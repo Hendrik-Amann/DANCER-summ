@@ -16,7 +16,8 @@ def read_args():
   parser.add_argument("--tokenizer_revision", type=str, help="")
   parser.add_argument("--dataset", type=str, help="")
   parser.add_argument("--batch_size", type=int, help="")
-  parser.add_argument("--max_length", type=int, help="")
+  parser.add_argument("--max_src_length", type=int, help="")
+  parser.add_argument("--max_target_length", type=int, help="")
   parser.add_argument("--text_col", type=str, help="")
   parser.add_argument("--sum_col", type=str, help="")
 
@@ -49,7 +50,7 @@ def main():
     for batch in tqdm(test_loader):
       model_inputs = tokenizer(
         batch[args.text_col],
-        max_length=args.max_length,
+        max_length=args.max_src_length,
         truncation=True,
         padding=True,
         return_tensors='pt'
@@ -60,7 +61,7 @@ def main():
         attention_mask = model_inputs["attention_mask"].to(device)
         global_attention_mask = torch.zeros_like(attention_mask)
         global_attention_mask[:, 0] = 1
-        outputs = model.generate(input_ids, attention_mask=attention_mask, global_attention_mask=global_attention_mask, num_beams=beam, length_penalty=length, no_repeat_ngram_size=ngrams, early_stopping=True)
+        outputs = model.generate(input_ids, max_length=args.max_target_length, attention_mask=attention_mask, global_attention_mask=global_attention_mask, num_beams=beam, length_penalty=length, no_repeat_ngram_size=ngrams, early_stopping=True)
       else:
         outputs = model.generate(input_ids, num_beams=beam, length_penalty=length, no_repeat_ngram_size=ngrams, early_stopping=True)
       gen_sum = [tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_space=True) for g in outputs]
