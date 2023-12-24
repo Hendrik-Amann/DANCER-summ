@@ -32,8 +32,8 @@ def main():
   test_loader = torch.utils.data.DataLoader(dataset, **params)
 
   device = "cuda" if torch.cuda.is_available() else "cpu"
-  tokenizer = AutoTokenizer.from_pretrained(args.model_name, revision=args.model_revision)
-  model = AutoModelForSeq2SeqLM.from_pretrained(args.tokenizer_name, revision=args.tokenizer_revision)
+  tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name, revision=args.tokenizer_revision)
+  model = AutoModelForSeq2SeqLM.from_pretrained(args.model_name, revision=args.model_revision)
   model.to(device)
   metric = load_metric("rouge")
 
