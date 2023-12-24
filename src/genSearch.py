@@ -45,7 +45,7 @@ def main():
   for beam, length, ngrams in itertools.product(beam_size, length_penalty, no_repeat_ngram_size):
     gen_sums = []
     #when num_beams is 1, the length penalty takes no effect. To not repeat unnecessarily, only use length penalty 1 when beam is 1
-    if beam == 1 and length_penalty != 1:
+    if beam == 1 and length != 1:
       continue
     for batch in tqdm(test_loader):
       model_inputs = tokenizer(
@@ -67,7 +67,7 @@ def main():
       gen_sum = [tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_space=True) for g in outputs]
       gen_sums += gen_sum
     
-    rscores = metric.compute(predictions=gen_sums, references=batch[args.sum_col])
+    rscores = metric.compute(predictions=gen_sums, references=dataset[args.sum_col])
     res += [[rscores['rouge2'].mid.fmeasure, {'beam_size': beam, 'length_penalty': length, 'no_repeat_ngram_size': ngrams}]]
 
   with open('genSearchRes.csv', 'w+') as f:
