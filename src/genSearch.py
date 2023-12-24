@@ -63,7 +63,7 @@ def main():
         global_attention_mask[:, 0] = 1
         outputs = model.generate(input_ids, max_length=args.max_target_length, attention_mask=attention_mask, global_attention_mask=global_attention_mask, num_beams=beam, length_penalty=length, no_repeat_ngram_size=ngrams, early_stopping=True)
       else:
-        outputs = model.generate(input_ids, num_beams=beam, length_penalty=length, no_repeat_ngram_size=ngrams, early_stopping=True)
+        outputs = model.generate(input_ids, max_length=args.max_target_length, num_beams=beam, length_penalty=length, no_repeat_ngram_size=ngrams, early_stopping=True)
       gen_sum = [tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_space=True) for g in outputs]
       gen_sums += gen_sum
     
