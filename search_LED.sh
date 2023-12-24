@@ -1,0 +1,11 @@
+python src/genSearch.py \
+  --model_name Hendrik-a/led-base-16384-arxiv2 \
+  --model_revision 7c9652e75b33689423bde82ae35eb10d013fccb0 \
+  --tokenizer_name allenai/led-base-16384 \
+  --tokenizer_revision 38335783885b338d93791936c54bb4be46bebed9 \
+  --dataset Hendrik-a/arxiv \
+  --batch_size 8 \
+  --max_src_length 16384 \
+  --max_target_length 256 \
+  --text_col article_text \
+  --sum_col abstract_text
