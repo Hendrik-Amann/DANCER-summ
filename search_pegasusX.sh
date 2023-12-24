@@ -6,4 +6,6 @@ python src/genSearch.py \
   --dataset Hendrik-a/arxiv \
   --batch_size 8 \
   --max_src_length 16384 \
-  --max_target_length 256
+  --max_target_length 256 \
+  --text_col abstract_text \
+  --sum_col article_text
