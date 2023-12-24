@@ -7,5 +7,5 @@ python src/genSearch.py \
   --batch_size 8 \
   --max_src_length 16384 \
   --max_target_length 256 \
-  --text_col abstract_text \
-  --sum_col article_text
+  --text_col article_text \
+  --sum_col abstract_text
