@@ -62,18 +62,6 @@ def generate_summaries(test_loader, args, device):
 
         gen_sums += gen_sum
 
-        #HA: added to analyse validation scores
-        if args.split == "validation":
-            target_sums += [
-                tokenizer.decode(
-                    g, skip_special_tokens=True, clean_up_tokenization_spaces=True
-                )
-                for g in tokenizer(batch[args.summary_column], max_length=args.max_source_length, truncation=True, padding=True, return_tensors='pt'
-                )['input_ids']
-            ]
-        else:
-            target_sums += batch[args.summary_column]
-
         #HA: in the original code, there was no if-else statement. Only the section commented out below. Reasoning in comment below
         if args.mode == "dancer":
             try:
@@ -153,7 +141,7 @@ def main():
     gen_sums, target_sums, article_ids, section_ids, abstracts = generate_summaries(test_loader, args, device=device)
     
     print("Scoring generated summaries")
-    if args.mode == "dancer":        
+    if args.mode == "dancer":
         
         metrics = scoring.score_dancer(
             gen_sums=gen_sums,
@@ -187,7 +175,7 @@ def main():
             out_path=out_path,
             write_gens=write_rouge)
 
-    #HA: generation of the summary files and the scoring are seperated by me. For scoring another script by me is used, which also computes the BERTScore. Therefore, teh following is commented out
+    #HA: generation of the summary files and the scoring are seperated by me. For scoring another script is used by me, which also computes the BERTScore. Therefore, the following is commented out
     """
     if write_rouge:
         scores_dict = scoring.score_outputs(out_path)
