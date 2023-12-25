@@ -1,0 +1,18 @@
+python src/dancer_generation.py \
+  --model_path facebook/bart-base \
+  --model_revision aadd2ab0ae0c8268c7c9693540e9904811f36177 \
+  --tokenizer_name facebook/bart-base \
+  --tokenizer_revision aadd2ab0ae0c8268c7c9693540e9904811f36177 \
+  --max_source_length 512 \
+  --max_target_length 20 \
+  --output_path genBART \
+  --dataset_name Hendrik-a/arxiv \
+  --text_column article_text \
+  --summary_column abstract_text \
+  --write_rouge 1 \
+  --seed 10 \
+  --test_batch_size 8 \
+  --num_beams 1 \
+  --length_penalty 1.0 \
+  --no_repeat_ngram_size 4 \
+  --max_test_samples 16
