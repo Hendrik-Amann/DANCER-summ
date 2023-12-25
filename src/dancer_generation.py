@@ -62,27 +62,15 @@ def generate_summaries(test_loader, args, device):
 
         gen_sums += gen_sum
 
-        #HA: in the original code, there was no if-else statement. Only the section commented out below. Reasoning in comment below
-        if args.mode == "dancer":
-            try:
-                article_ids += batch["article_id"]
-                section_ids += batch["section_id"]
-                abstracts += batch["abstract"]
-            except KeyError:
-                article_ids += [i]
-        else:
-            article_ids += batch["article_id"]
-
-        #HA: I want to include the article_ids also for the non-DANCER dataset, where there are no section_ids or abstracts. Section above already implements this, so the following should be commented out
-        """
         try:
             article_ids += batch["article_id"]
             section_ids += batch["section_id"]
             abstracts += batch["abstract"]
         except KeyError:
-            article_ids += [i]
+            #HA: with non-DANCER dataset that does not have a section_id, there will be a keyerror. Adding i as the article_id does not make sense in that case. Because it is not needed with my datasets, the following line is commented out
+            #article_ids += [i]
             pass
-        """
+
     return gen_sums, target_sums, article_ids, section_ids, abstracts
 
 
