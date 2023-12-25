@@ -1,4 +1,5 @@
 python src/dancer_generation.py \
+  --mode standard \
   --model_path Hendrik-a/led-base-16384-arxiv2 \
   --model_revision 7c9652e75b33689423bde82ae35eb10d013fccb0 \
   --tokenizer_name allenai/led-base-16384 \
