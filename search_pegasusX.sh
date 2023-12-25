@@ -5,6 +5,7 @@ python src/genSearch.py \
   --tokenizer_revision cd8a69a4c88a469312423199b8dcd331f6af8b08 \
   --dataset Hendrik-a/arxiv \
   --batch_size 8 \
+  --seed 10 \
   --max_src_length 16384 \
   --max_target_length 256 \
   --text_col article_text \
