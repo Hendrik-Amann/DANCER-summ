@@ -41,7 +41,7 @@ def generate_summaries(test_loader, args, device):
                 length_penalty=args.length_penalty,
                 no_repeat_ngram_size=args.no_repeat_ngram_size,
                 early_stopping=True,
-                max_new_tokens=max_target_length,
+                max_new_tokens=args.max_target_length,
             )
         else:
             sent_outputs = model.generate(
@@ -51,7 +51,7 @@ def generate_summaries(test_loader, args, device):
                 no_repeat_ngram_size=args.no_repeat_ngram_size,
                 early_stopping=True,
                 #HA: added max_new_tokens (if not set the model config controlls it)
-                max_new_tokens=max_target_length,
+                max_new_tokens=args.max_target_length,
             #HA: dictionary and output_scores not used anyway, so I removed it. Should increase performance a bit, since no dict has to be returned
             #return_dict_in_generate=True,
             #output_scores=True
