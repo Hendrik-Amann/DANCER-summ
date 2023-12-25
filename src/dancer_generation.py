@@ -40,7 +40,7 @@ def generate_summaries(test_loader, args, device):
                 num_beams=args.num_beams,
                 length_penalty=args.length_penalty,
                 no_repeat_ngram_size=args.no_repeat_ngram_size,
-                early_stopping=True;
+                early_stopping=True,
                 max_new_tokens=max_target_length,
             )
         else:
