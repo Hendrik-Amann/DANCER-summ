@@ -13,6 +13,6 @@ python src/dancer_generation.py \
   --seed 10 \
   --test_batch_size 8 \
   --num_beams 3 \
-  --length_penalty 1.0 \
+  --length_penalty 1.2 \
   --no_repeat_ngram_size 4 \
   --max_test_samples 16
