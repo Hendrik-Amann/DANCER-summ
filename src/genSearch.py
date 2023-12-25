@@ -20,12 +20,16 @@ def read_args():
   parser.add_argument("--max_target_length", type=int, help="")
   parser.add_argument("--text_col", type=str, help="")
   parser.add_argument("--sum_col", type=str, help="")
+  parser.add_argument("--seed", type=int, default=10, help="")
 
   args, unknown = parser.parse_known_args()
   return args, unknown
 
 def main():
   args, unknown = read_args()
+
+  random.seed(args.seed)
+  torch.manual_seed(args.seed)
 
   dataset = load_dataset(args.dataset, split="validation")
   params = {'batch_size': args.batch_size, 'shuffle': False}
