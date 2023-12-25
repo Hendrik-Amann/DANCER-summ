@@ -1,13 +1,18 @@
 python src/dancer_generation.py \
-    --mode dancer \
-    --model_path google/pegasus-xsum \
-    --output_path dancer_pubmed \
-    --dataset_name Hendrik-a/dancer-data \
-    --text_column document \
-    --summary_column summary \
-    --write_rouge 1 \
-    --seed 100 \
-    --test_batch_size 6 \
-    --max_source_length 512 --max_summary_length 128 \
-    --num_beams 1 \
-    --max_test_samples 20
+  --model_path Hendrik-a/dancer-pegasus-large-arxiv \
+  --model_revision 4abb7179e0cd1bdd953f5c50fd0a439601f65c55 \
+  --tokenizer_name google/pegasus-large \
+  --tokenizer_revision dec7796b22f29b7d1c476192313eae8ed57b6b77 \
+  --max_source_length 1024 \
+  --max_target_length 128 \
+  --output_path genDANCER \
+  --dataset_name Hendrik-a/dancer-data \
+  --text_column document \
+  --summary_column summary \
+  --write_rouge 1 \
+  --seed 100 \
+  --test_batch_size 32 \
+  --num_beams 2 \
+  --length_penalty 1.2 \
+  --no_repeat_ngram_size 4 \
+  --max_test_samples 16
