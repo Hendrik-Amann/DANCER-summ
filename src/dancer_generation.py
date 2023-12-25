@@ -40,7 +40,9 @@ def generate_summaries(test_loader, args, device):
                 num_beams=args.num_beams,
                 length_penalty=args.length_penalty,
                 no_repeat_ngram_size=args.no_repeat_ngram_size,
-                early_stopping=True)
+                early_stopping=True;
+                max_new_tokens=max_target_length,
+            )
         else:
             sent_outputs = model.generate(
                 input_ids,
@@ -48,6 +50,8 @@ def generate_summaries(test_loader, args, device):
                 length_penalty=args.length_penalty,
                 no_repeat_ngram_size=args.no_repeat_ngram_size,
                 early_stopping=True,
+                #HA: added max_new_tokens (if not set the model config controlls it)
+                max_new_tokens=max_target_length,
             #HA: dictionary and output_scores not used anyway, so I removed it. Should increase performance a bit, since no dict has to be returned
             #return_dict_in_generate=True,
             #output_scores=True
@@ -94,7 +98,8 @@ def read_args():
     parser.add_argument("--seed", type=int, default=10, help="")
     parser.add_argument("--test_batch_size", type=int, default=2, help="")
     parser.add_argument("--num_beams", type=int, default=3, help="")
-    #HA: added no_repeat_ngram_size and length penalty
+    #HA: added max_target_length, no_repeat_ngram_size and length penalty
+    parser.add_argument("--max_target_length", type=float, default=3, help="")
     parser.add_argument("--no_repeat_ngram_size", type=int, default=3, help="")
     parser.add_argument("--length_penalty", type=float, default=3, help="")
 
