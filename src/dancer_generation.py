@@ -61,7 +61,7 @@ def generate_summaries(test_loader, args, device):
                 clean_up_tokenization_spaces=True) for g in sent_outputs]
 
         gen_sums += gen_sum
-
+        target_sums += batch[args.summary_column]
         try:
             article_ids += batch["article_id"]
             section_ids += batch["section_id"]
