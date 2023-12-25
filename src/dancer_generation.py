@@ -65,7 +65,8 @@ def generate_summaries(test_loader, args, device):
         try:
             article_ids += batch["article_id"]
             section_ids += batch["section_id"]
-            abstracts += batch["abstract"]
+            #HA: changed it from batch["abstract"] to batch[args.summary_column]
+            abstracts += batch[args.summary_column]
         except KeyError:
             #HA: with non-DANCER dataset that does not have a section_id, there will be a keyerror. Adding i as the article_id does not make sense in that case. Because it is not needed with my datasets, the following line is commented out
             #article_ids += [i]
