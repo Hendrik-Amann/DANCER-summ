@@ -63,7 +63,6 @@ def main():
 
       #load_metric is a wrapper around rouge. Used load_metric instead of rouge here since it offers aggregated results
       metric = load_metric("rouge")
-      print("Rouge scores across generated summaries:", metric.compute(predictions=decoded_preds, references=[decoded_preds[0] for i in range(len(decoded_preds))]))
       
       rscores = rouge.score(target=ref_text, prediction=hyp_text)
       for key in rscores.keys():
