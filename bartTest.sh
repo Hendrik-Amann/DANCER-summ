@@ -11,7 +11,7 @@ python src/dancer_generation.py \
   --summary_column abstract_text \
   --write_rouge 1 \
   --seed 10 \
-  --test_batch_size 8 \
+  --test_batch_size 4 \
   --num_beams 1 \
   --length_penalty 1.0 \
   --no_repeat_ngram_size 4 \
