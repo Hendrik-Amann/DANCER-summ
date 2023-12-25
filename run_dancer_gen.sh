@@ -5,7 +5,7 @@ python src/dancer_generation.py \
   --tokenizer_revision dec7796b22f29b7d1c476192313eae8ed57b6b77 \
   --max_source_length 1024 \
   --max_target_length 128 \
-  --output_path genDANCER \
+  --output_path genDancer \
   --dataset_name Hendrik-a/dancer-data \
   --text_column document \
   --summary_column summary \
