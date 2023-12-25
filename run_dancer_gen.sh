@@ -1,4 +1,5 @@
 python src/dancer_generation.py \
+  --mode dancer \
   --model_path Hendrik-a/dancer-pegasus-large-arxiv \
   --model_revision 4abb7179e0cd1bdd953f5c50fd0a439601f65c55 \
   --tokenizer_name google/pegasus-large \
@@ -14,5 +15,4 @@ python src/dancer_generation.py \
   --test_batch_size 32 \
   --num_beams 2 \
   --length_penalty 1.2 \
-  --no_repeat_ngram_size 4 \
-  --max_test_samples 16
+  --no_repeat_ngram_size 4
