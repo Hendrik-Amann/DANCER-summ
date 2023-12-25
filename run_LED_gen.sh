@@ -14,5 +14,4 @@ python src/dancer_generation.py \
   --test_batch_size 8 \
   --num_beams 3 \
   --length_penalty 1.2 \
-  --no_repeat_ngram_size 4 \
-  --max_test_samples 16
+  --no_repeat_ngram_size 4
