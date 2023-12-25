@@ -108,8 +108,6 @@ def read_args():
     #HA: added no_repeat_ngram_size and length penalty
     parser.add_argument("--no_repeat_ngram_size", type=int, default=3, help="")
     parser.add_argument("--length_penalty", type=int, default=3, help="")
-    #HA: added to analyse validation scores
-    parser.add_argument("--split", type=str, help="")
 
     #HA: added revisions to specify commits
     parser.add_argument("--tokenizer_revision", type=str, help="")
