@@ -4,6 +4,7 @@ python src/genSearch.py \
   --tokenizer_name google/pegasus-large \
   --tokenizer_revision dec7796b22f29b7d1c476192313eae8ed57b6b77 \
   --dataset Hendrik-a/dancer-data \
+  --seed 10 \
   --batch_size 64 \
   --max_src_length 1024 \
   --max_target_length 128 \
