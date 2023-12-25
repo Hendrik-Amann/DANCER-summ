@@ -10,7 +10,7 @@ python src/dancer_generation.py \
   --text_column article_text \
   --summary_column abstract_text \
   --write_rouge 1 \
-  --seed 100 \
+  --seed 10 \
   --test_batch_size 8 \
   --num_beams 3 \
   --length_penalty 1.0 \
